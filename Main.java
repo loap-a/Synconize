@@ -1,12 +1,64 @@
 package CD_Shop;
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.Vector;
 import java.io.*;
+import static java.lang.Thread.*;
+class rent_cd_all
+{
+    ArrayList<rent_cd> my_rent_cd;
+    public rent_cd_all()
+    {
+        my_rent_cd = new ArrayList<rent_cd>();
+        for(int i=1;i<=10;i++)
+        {
+            my_rent_cd.add(new rent_cd(i-1));
+        }
+    }
+    public void rent(int number,int id) {
+        Random r = new Random();
+        if (my_rent_cd.get(number).flag) {
+            Main.outFiles(" cd " + number + " has been occupied ");
+            if (r.nextBoolean()) {
+                Main.outFile("after some wait  cd " + number + " has been rented " + " at " + System.currentTimeMillis());
+                my_rent_cd.get(number).flag = true;
+                try {
+                    wait(310);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Main.outFile("rent-thread id " + id + " cd " + number + " has been returned " + "at " + System.currentTimeMillis());
+                my_rent_cd.get(number).flag = false;
+
+            } else {
+                Main.outFile("choose not to wait" + " at " + System.currentTimeMillis());
+            }
+        } else {
+            Main.outFile("cd " + number + " now has been rented by you " + " at " + System.currentTimeMillis());
+            my_rent_cd.get(number).flag = true;
+            try {
+                wait(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            my_rent_cd.get(number).flag = false;
+            Main.outFile("rent-thread id " + id + " cd " + number + " has been returned" + " at " + System.currentTimeMillis());
+        }
+    }
+}
+class rent_cd
+{
+    int id;
+    boolean flag;
+    public rent_cd(int i){id=i;flag=false;}
+}
+
 public class Main {
     public static void main(String[] args)
     {
         all_cd cd=new all_cd();
-        control_thread ct=new control_thread(cd);
+        rent_cd_all rcd=new rent_cd_all();
+        control_thread ct=new control_thread(cd,rcd);
         ct.start();
     }
     public static void outFile(String s) {
@@ -33,7 +85,65 @@ public class Main {
         }
     }
 }
+class control_thread extends Thread {
+    all_cd cd;
+    rent_cd_all rcd;
+    control_thread(all_cd c,rent_cd_all cc){this.cd=c;this.setDaemon(false);this.rcd=cc;}
 
+    @Override
+    public void run()
+    {
+
+        new in_thread(cd).start();
+        new sale_thread(cd).start();
+        new sale_thread(cd).start();
+        new sale_thread(cd).start();
+        new sale_thread(cd).start();
+        new sale_thread(cd).start();
+        new sale_thread(cd).start();
+        new rent_thread(rcd).start();
+        new rent_thread(rcd).start();
+        new rent_thread(rcd).start();
+        new rent_thread(rcd).start();
+        new rent_thread(rcd).start();
+
+        try {
+            sleep(180*1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
+}
+
+class rent_thread extends Thread{
+    rent_cd_all rcd;
+    static int ids=0;
+    int id;
+    rent_thread(rent_cd_all c) {
+        this.rcd = c;
+        this.setDaemon(true);
+        id=++ids;
+    }
+    @Override
+    public void run() {
+        Main.outFile("rent thread id "+id+" start"+" at "+System.currentTimeMillis());
+        Random r = new Random();
+        while (true) {
+            try {
+                sleep(100+r.nextInt(200));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            int rent_num=r.nextInt(10);
+            synchronized (rcd)
+            {
+                Main.outFiles("rent-thread id "+id+" ");
+                rcd.rent(rent_num,id);
+            }
+        }
+    }
+}
 class  in_thread extends Thread {
     all_cd cd;
     in_thread(all_cd c){
@@ -46,7 +156,6 @@ class  in_thread extends Thread {
         synchronized (cd) {
             while (true) {
                 cd.get_in();
-
                 try {
                     cd.wait(1000);
                 } catch (InterruptedException e) {
@@ -68,11 +177,11 @@ class sale_thread extends Thread {
     }
     @Override
     public void run() {
-        Main.outFile("sale thread id "+id+" start");
+        Main.outFile("sale thread id "+id+" start "+" at "+System.currentTimeMillis());
         Random r = new Random();
         while (true) {
             try {
-                Thread.sleep(r.nextInt(200));
+                sleep(r.nextInt(200));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -85,39 +194,8 @@ class sale_thread extends Thread {
         }
     }
 }
-class control_thread extends Thread
-{
-    all_cd cd;
-    control_thread(all_cd c){this.cd=c;this.setDaemon(false);}
 
-    @Override
-    public void run()
-    {
-
-        new in_thread(cd).start();
-        new sale_thread(cd).start();
-        new sale_thread(cd).start();
-        new sale_thread(cd).start();
-        new sale_thread(cd).start();
-        new sale_thread(cd).start();
-        new sale_thread(cd).start();
-        new rent_thread(cd).start();
-        new rent_thread(cd).start();
-        new rent_thread(cd).start();
-        new rent_thread(cd).start();
-
-
-        try {
-            Thread.sleep(60*1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-    }
-}
-
-class all_cd
-{
+class all_cd {
     Vector<CD>my_cd=new Vector<CD>();
     all_cd()
     {
@@ -135,99 +213,72 @@ class all_cd
         {
             my_cd.get(i).num=10;
         }
-        Main.outFile("all cd "+"'s num has been set to 10 ");
+        Main.outFile("all cd "+"'s num has been set to 10 "+" at "+System.currentTimeMillis());
         notifyAll();
     }
     void sale(int number,int num)
     {
         Random r=new Random();
-        while (my_cd.get(number).num - num < 0) {
+        while(my_cd.get(number).num - num < 0) {
             Main.outFiles((number+" stock not enough "));
             notifyAll();
             if(r.nextBoolean()) {
-                Main.outFile("choose to wait and successful sale cd "+number+" for "+num);
-
+                Main.outFile("choose to wait and successful sale cd "+number+" for "+num+" at "+System.currentTimeMillis());
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                my_cd.get(number).num -= num;
+                return;
             }
             else
-            { Main.outFile( "choose not to wait ");return;}
-
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            {
+                Main.outFile( "choose not to wait "+" at "+System.currentTimeMillis());
+                return;
             }
-            return;
         }
-        Main.outFile((my_cd.get(number).name+" successful sale " + num));
-        my_cd.get(number).num -= num;
+
+            Main.outFile((my_cd.get(number).name + " successful sale " + num) + " at " + System.currentTimeMillis());
+            my_cd.get(number).num -= num;
+
     }
-    void rent(int number)
+    void rent(int number,int id)
     {
         Random r=new Random();
-        while(my_cd.get(number).rent_flag)
+        if(my_cd.get(number).rent_flag)
         {
-            Main.outFiles(number+" has been occupied ");
+            Main.outFiles(" cd "+number+" has been occupied ");
             if(r.nextBoolean())
             {
-                Main.outFile("after some wait  cd "+number+" has been rented ");
+                Main.outFile("after some wait  cd "+number+" has been rented "+" at "+System.currentTimeMillis());
                 my_cd.get(number).rent_flag=true;
                 try {
-                    wait(200+r.nextInt(100));
+                    sleep(310);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                try {
-                    wait(300);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                Main.outFile("rent-thread id "+id+" cd "+number+ " has been returned "+"at "+System.currentTimeMillis());
                 my_cd.get(number).rent_flag=false;
                 return;
             }
             else
             {
-                Main.outFile("choose not to wait");
+                Main.outFile("choose not to wait"+" at "+System.currentTimeMillis());
                 return;
             }
 
 
         }
-        Main.outFile("cd "+number+" now has been rented by you ");
+        Main.outFile("cd "+number+" now has been rented by you "+" at "+System.currentTimeMillis());
         my_cd.get(number).rent_flag=true;
         try {
-            wait(200+r.nextInt(100));
+            sleep(300);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         my_cd.get(number).rent_flag=false;
-    }
-}
-
-class rent_thread extends Thread{
-    all_cd cd;
-    static int ids=0;
-    int id;
-    rent_thread(all_cd c) {
-        this.cd = c;
-        this.setDaemon(true);
-        id=++ids;
-    }
-    @Override
-    public void run() {
-        Main.outFile("rent thread id "+id+" start");
-        Random r = new Random();
-        while (true) {
-            try {
-                Thread.sleep(r.nextInt(200));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            int rent_num=r.nextInt(10);
-            synchronized (cd) {
-                Main.outFiles("rent-thread id "+id+" ");
-                cd.rent(rent_num);
-            }
-        }
+        Main.outFile("rent-thread id "+id+ " cd "+number+" has been returned" +" at "+System.currentTimeMillis());
     }
 }
 class CD {
@@ -245,7 +296,6 @@ class CD {
         Main.outFile(getname+" get_in start now ");
         notifyAll();
     }
-
     synchronized void sale(int n , String sellname) {
         while (num - n < 0) {
             Main.outFile(sellname+" stock not enough ");
