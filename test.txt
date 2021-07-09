@@ -1,2 +1,2 @@
-Git is a distrubuted version control system
-Git is a free software That's nice
+Git is a  control system
+Git is a free software That's nice it's under me
