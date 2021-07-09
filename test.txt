@@ -1,2 +1,3 @@
 Git is a  control system
 Git is a free software That's nice it's under me
+git has a mutable index called stage
